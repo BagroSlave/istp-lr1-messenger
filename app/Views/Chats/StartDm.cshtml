@@ -1,0 +1,39 @@
+@model List<MessengerApp.Models.AppUser>
+@{
+    ViewData["Title"] = "Написати користувачу";
+    string Initial(string? s) => string.IsNullOrEmpty(s) ? "?" : s.Substring(0, 1).ToUpper();
+}
+
+<div class="chatbox" style="height:auto">
+    <header class="chat-head">
+        <div class="avatar sm">✉️</div>
+        <div>
+            <div class="chat-title">Написати користувачу</div>
+            <div class="chat-sub">Оберіть користувача, щоб почати приватний чат</div>
+        </div>
+    </header>
+
+    <div style="padding:18px">
+        @if (!Model.Any())
+        {
+            <p class="text-muted">Інших користувачів ще немає.</p>
+        }
+        else
+        {
+            <div class="user-pick-list">
+                @foreach (var u in Model)
+                {
+                    <form asp-action="StartDm" method="post" class="user-pick-row">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@u.Id" />
+                        <button type="submit" class="user-pick-btn">
+                            <div class="avatar sm">@Initial(u.UserName)</div>
+                            <span class="user-pick-name">@u.UserName</span>
+                            <span class="user-pick-go">Написати →</span>
+                        </button>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+</div>

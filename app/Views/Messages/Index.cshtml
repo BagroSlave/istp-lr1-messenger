@@ -1,0 +1,37 @@
+@model IEnumerable<MessengerApp.Models.Message>
+@{
+    var chat = (MessengerApp.Models.Chat)ViewBag.Chat;
+    ViewData["Title"] = "Чат: " + chat.Title;
+}
+
+<h2>@chat.Title</h2>
+<p class="text-muted">Повідомлень: @Model.Count()</p>
+
+<table class="table table-sm align-middle">
+    <thead>
+        <tr><th>Відправник</th><th>Текст</th><th>Час</th><th></th></tr>
+    </thead>
+    <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td>@m.SenderId</td>
+                <td>@m.Text</td>
+                <td>@m.SentAt.ToLocalTime().ToString("HH:mm")</td>
+                <td>
+                    <form asp-action="Delete" asp-route-id="@m.Id" method="post" onsubmit="return confirm('Видалити повідомлення?');">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-danger">×</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<form asp-action="Create" method="post" class="d-flex gap-2">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="chatId" value="@chat.Id" />
+    <input type="text" name="text" class="form-control" placeholder="Написати повідомлення…" required autocomplete="off" />
+    <button type="submit" class="btn btn-primary">Надіслати</button>
+</form>

@@ -1,0 +1,41 @@
+@model IEnumerable<MessengerApp.Models.Chat>
+@{
+    ViewData["Title"] = "Чати";
+}
+
+<h1>Чати</h1>
+
+<p>
+    <a class="btn btn-success" asp-action="Create">Створити чат</a>
+    <a class="btn btn-outline-primary" asp-controller="Chart" asp-action="Index">Діаграма</a>
+    <a class="btn btn-outline-secondary" asp-controller="Messages" asp-action="ExportExcel">Експорт повідомлень в Excel</a>
+</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Назва</th>
+            <th>Створено</th>
+            <th>Учасників</th>
+            <th>Повідомлень</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Title</td>
+                <td>@item.CreatedAt.ToLocalTime().ToString("g")</td>
+                <td>@item.Members.Count</td>
+                <td>@item.Messages.Count</td>
+                <td>
+                    <a class="btn btn-sm btn-primary" asp-controller="Messages" asp-action="Index" asp-route-chatId="@item.Id">Відкрити</a>
+                    <a class="btn btn-sm btn-outline-info" asp-action="Details" asp-route-id="@item.Id">Деталі</a>
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@item.Id">Редагувати</a>
+                    <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@item.Id">Видалити</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,39 @@
+@model MessengerApp.Models.Chat
+@{
+    ViewData["Title"] = "Деталі чату";
+}
+
+<h1>@Model.Title</h1>
+<p class="text-muted">Створено: @Model.CreatedAt.ToLocalTime().ToString("g")</p>
+
+<h4>Учасники (@Model.Members.Count)</h4>
+<ul>
+    @foreach (var member in Model.Members)
+    {
+        <li>@(member.User?.UserName ?? member.UserId)</li>
+    }
+</ul>
+
+<h4>Повідомлення (@Model.Messages.Count)</h4>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Відправник</th>
+            <th>Текст</th>
+            <th>Час</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var m in Model.Messages.OrderBy(x => x.SentAt))
+        {
+            <tr>
+                <td>@(m.Sender?.UserName ?? m.SenderId)</td>
+                <td>@m.Text</td>
+                <td>@m.SentAt.ToLocalTime().ToString("g")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a class="btn btn-primary" asp-controller="Messages" asp-action="Index" asp-route-chatId="@Model.Id">Відкрити чат</a>
+<a asp-action="Index" class="btn btn-secondary">Назад до списку</a>

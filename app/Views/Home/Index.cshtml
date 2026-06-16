@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Головна";
+}
+
+<div class="hero mb-4">
+    <h1>💬 Месенджер</h1>
+    <p>Лабораторна робота 1 · ASP.NET Core MVC · EF Core (PostgreSQL) · ASP.NET Identity</p>
+    <a class="btn btn-light btn-lg mt-3" asp-controller="Chats" asp-action="Index">Перейти до чатів →</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="feature">
+            <span class="ico">🔐</span>
+            <h5>Авторизація та ролі</h5>
+            <p>ASP.NET Identity: реєстрація, вхід, ролі «Admin»/«User», захист сторінок.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature">
+            <span class="ico">💬</span>
+            <h5>Чати й повідомлення</h5>
+            <p>CRUD чатів та обмін повідомленнями. Доменна модель Chat · Message · ChatMember · AppUser.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature">
+            <span class="ico">📊</span>
+            <h5>Діаграма</h5>
+            <p>Кількість повідомлень за чатами через Chart.js (розділ «Графік»).</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature">
+            <span class="ico">📑</span>
+            <h5>Excel</h5>
+            <p>Експорт та імпорт повідомлень у форматі .xlsx за допомогою ClosedXML.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature">
+            <span class="ico">🗄️</span>
+            <h5>PostgreSQL · Code-First</h5>
+            <p>База даних через провайдер Npgsql, схема — міграціями EF Core.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="feature">
+            <span class="ico">🎨</span>
+            <h5>Майстер-сторінка</h5>
+            <p>Єдиний _Layout, навігація, адаптивна стилізація.</p>
+        </div>
+    </div>
+</div>
