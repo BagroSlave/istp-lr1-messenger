@@ -1,0 +1,38 @@
+@model IEnumerable<MessengerApp.Controllers.ChartItem>
+@{
+    ViewData["Title"] = "Діаграма";
+    // Передаємо дані у JavaScript у форматі JSON.
+    var labels = Model.Select(x => x.Chat).ToArray();
+    var counts = Model.Select(x => x.Count).ToArray();
+}
+
+<h1>Кількість повідомлень за чатами</h1>
+
+<canvas id="messagesChart" height="120"></canvas>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(labels));
+        const counts = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(counts));
+
+        new Chart(document.getElementById('messagesChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Кількість повідомлень',
+                    data: counts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+    </script>
+}
