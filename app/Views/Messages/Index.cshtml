@@ -2,36 +2,75 @@
 @{
     var chat = (MessengerApp.Models.Chat)ViewBag.Chat;
     ViewData["Title"] = "Чат: " + chat.Title;
+    var me = User.Identity?.Name;
+    string Initial(string? s) => string.IsNullOrEmpty(s) ? "?" : s.Substring(0, 1).ToUpper();
 }
 
-<h2>@chat.Title</h2>
-<p class="text-muted">Повідомлень: @Model.Count()</p>
+@if (TempData["ImportResult"] != null)
+{
+    <div class="alert alert-info">@TempData["ImportResult"]</div>
+}
 
-<table class="table table-sm align-middle">
-    <thead>
-        <tr><th>Відправник</th><th>Текст</th><th>Час</th><th></th></tr>
-    </thead>
-    <tbody>
-        @foreach (var m in Model)
-        {
-            <tr>
-                <td>@m.SenderId</td>
-                <td>@m.Text</td>
-                <td>@m.SentAt.ToLocalTime().ToString("HH:mm")</td>
-                <td>
-                    <form asp-action="Delete" asp-route-id="@m.Id" method="post" onsubmit="return confirm('Видалити повідомлення?');">
+<div class="chatbox">
+    <header class="chat-head">
+        <div class="avatar sm">@if (!string.IsNullOrEmpty(chat.ImageData)) { <img src="@chat.ImageData" alt="" /> } else { @Initial(chat.Title) }</div>
+        <div>
+            <div class="chat-title">@chat.Title</div>
+            <div class="chat-sub">@Model.Count() повідомлень</div>
+        </div>
+        <div class="chat-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-popup="chatMenu">⋮</button>
+            <div class="popup" id="chatMenu" style="right:0;left:auto;top:calc(100% + 6px)">
+                <a asp-action="ExportExcel">⬇ Експорт у Excel</a>
+                <label>
+                    ⬆ Імпорт з Excel
+                    <form asp-action="ImportExcel" method="post" enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-sm btn-outline-danger">×</button>
+                        <input type="file" name="file" accept=".xlsx" onchange="this.form.submit()" hidden />
                     </form>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+                </label>
+                <a asp-controller="Chart" asp-action="Index">📊 Графік</a>
+                <a asp-controller="Chats" asp-action="Edit" asp-route-id="@chat.Id">✏️ Перейменувати чат</a>
+                <a asp-controller="Chats" asp-action="Delete" asp-route-id="@chat.Id">🗑️ Видалити чат</a>
+            </div>
+        </div>
+    </header>
 
-<form asp-action="Create" method="post" class="d-flex gap-2">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="chatId" value="@chat.Id" />
-    <input type="text" name="text" class="form-control" placeholder="Написати повідомлення…" required autocomplete="off" />
-    <button type="submit" class="btn btn-primary">Надіслати</button>
-</form>
+    <div class="chat-window" id="chatScroll">
+        @if (!Model.Any())
+        {
+            <p class="chat-empty">Повідомлень ще немає. Напишіть перше! ✍️</p>
+        }
+        else
+        {
+            @foreach (var m in Model)
+            {
+                var who = m.Sender?.UserName ?? m.SenderId ?? "?";
+                var mine = who == me;
+                <div class="msg @(mine ? "mine" : "")">
+                    <div class="avatar sm">@if (!string.IsNullOrEmpty(m.Sender?.AvatarData)) { <img src="@m.Sender.AvatarData" alt="" /> } else { @Initial(who) }</div>
+                    <div>
+                        <div class="bubble">
+                            <div class="who">@who</div>
+                            <div class="txt">@m.Text</div>
+                            <div class="time">
+                                <span>@m.SentAt.ToLocalTime().ToString("HH:mm")</span>
+                                <form asp-action="Delete" asp-route-id="@m.Id" method="post" class="d-inline" onsubmit="return confirm('Видалити повідомлення?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn-del" title="Видалити">×</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <form class="chat-input" asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="chatId" value="@chat.Id" />
+        <input type="text" name="text" class="form-control" placeholder="Написати повідомлення…" required autofocus autocomplete="off" />
+        <button type="submit" class="btn btn-primary">➤</button>
+    </form>
+</div>

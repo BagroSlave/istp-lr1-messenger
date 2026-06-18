@@ -1,0 +1,32 @@
+@using MessengerApp.Models
+@model List<MessengerApp.Components.ChatListItem>
+@{
+    var active = (int)ViewBag.ActiveChatId;
+    string Initial(string? s) => string.IsNullOrEmpty(s) ? "?" : s.Substring(0, 1).ToUpper();
+}
+<div class="side-section">Чати</div>
+<div class="side-chats">
+    @foreach (var c in Model)
+    {
+        var pinned = c.Type == ChatType.Global;
+        <a class="side-chat @(pinned ? "pinned" : "") @(c.Id == active ? "active" : "")" asp-controller="Messages" asp-action="Index" asp-route-chatId="@c.Id">
+            <div class="avatar sm">@if (pinned) { <text>🌐</text> } else if (!string.IsNullOrEmpty(c.ImageData)) { <img src="@c.ImageData" alt="" /> } else { @Initial(c.DisplayTitle) }</div>
+            <div class="side-chat-info">
+                <div class="side-chat-title">@c.DisplayTitle</div>
+                <div class="side-chat-sub">@c.MessageCount повідомл.</div>
+            </div>
+            @if (pinned)
+            {
+                <span class="pin" title="Закріплено">📌</span>
+            }
+        </a>
+    }
+    @if (Model.Count == 0)
+    {
+        <div class="side-empty">Чатів ще немає</div>
+    }
+</div>
+<div class="side-actions">
+    <a class="side-act side-act-primary" asp-controller="Chats" asp-action="StartDm">✉️ Написати</a>
+    <a class="side-act" asp-controller="Chats" asp-action="Create">➕ Чат</a>
+</div>
