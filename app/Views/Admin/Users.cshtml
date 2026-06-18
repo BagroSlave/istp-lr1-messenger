@@ -1,0 +1,27 @@
+@model IEnumerable<MessengerApp.Controllers.UserRow>
+@{
+    ViewData["Title"] = "Користувачі";
+}
+
+<h1>Користувачі (адмін)</h1>
+<p class="text-muted">Ця сторінка доступна лише користувачам у ролі «Admin».</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Ім'я користувача</th>
+            <th>Ролі</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in Model)
+        {
+            <tr>
+                <td>@u.Email</td>
+                <td>@u.UserName</td>
+                <td>@u.Roles</td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,19 +1,24 @@
 using ClosedXML.Excel;
 using MessengerApp.Data;
 using MessengerApp.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MessengerApp.Controllers;
 
-// Контролер повідомлень: перегляд, створення, видалення, експорт/імпорт Excel.
+// Контролер повідомлень: перегляд за чатом, створення, видалення, експорт/імпорт Excel.
+[Authorize]
 public class MessagesController : Controller
 {
     private readonly MessengerContext _context;
+    private readonly UserManager<AppUser> _userManager;
 
-    public MessagesController(MessengerContext context)
+    public MessagesController(MessengerContext context, UserManager<AppUser> userManager)
     {
         _context = context;
+        _userManager = userManager;
     }
 
     // GET: Messages?chatId=1 — список повідомлень обраного чату.
@@ -23,30 +28,39 @@ public class MessagesController : Controller
         if (chat == null) return NotFound();
 
         var messages = await _context.Messages
+            .Include(m => m.Sender)
             .Where(m => m.ChatId == chatId)
             .OrderBy(m => m.SentAt)
             .ToListAsync();
 
+        // Список усіх чатів для бічної панелі (стиль Telegram/Discord).
+        ViewBag.Chats = await _context.Chats
+            .Include(c => c.Messages)
+            .OrderBy(c => c.Title)
+            .ToListAsync();
         ViewBag.Chat = chat;
         return View(messages);
     }
 
-    // POST: Messages/Create — надсилання повідомлення в чат.
+    // POST: Messages/Create — надсилання повідомлення в чат від поточного користувача.
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(int chatId, string text)
     {
         if (string.IsNullOrWhiteSpace(text))
+        {
             return RedirectToAction(nameof(Index), new { chatId });
+        }
 
-        var senderId = await _context.Users.Select(u => u.Id).FirstOrDefaultAsync() ?? string.Empty;
-        _context.Messages.Add(new Message
+        var userId = _userManager.GetUserId(User)!;
+        var message = new Message
         {
             ChatId = chatId,
-            SenderId = senderId,
+            SenderId = userId,
             Text = text,
             SentAt = DateTime.UtcNow
-        });
+        };
+        _context.Messages.Add(message);
         await _context.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index), new { chatId });
@@ -72,38 +86,46 @@ public class MessagesController : Controller
     {
         var messages = await _context.Messages
             .Include(m => m.Chat)
+            .Include(m => m.Sender)
             .OrderBy(m => m.SentAt)
             .ToListAsync();
 
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Повідомлення");
 
+        // Заголовки таблиці.
         ws.Cell(1, 1).Value = "Id";
         ws.Cell(1, 2).Value = "ChatId";
         ws.Cell(1, 3).Value = "Чат";
-        ws.Cell(1, 4).Value = "Текст";
-        ws.Cell(1, 5).Value = "Надіслано";
+        ws.Cell(1, 4).Value = "Відправник";
+        ws.Cell(1, 5).Value = "Текст";
+        ws.Cell(1, 6).Value = "Надіслано";
         ws.Row(1).Style.Font.Bold = true;
 
+        // Дані.
         var row = 2;
         foreach (var m in messages)
         {
             ws.Cell(row, 1).Value = m.Id;
             ws.Cell(row, 2).Value = m.ChatId;
             ws.Cell(row, 3).Value = m.Chat?.Title ?? "";
-            ws.Cell(row, 4).Value = m.Text;
-            ws.Cell(row, 5).Value = m.SentAt;
+            ws.Cell(row, 4).Value = m.Sender?.UserName ?? "";
+            ws.Cell(row, 5).Value = m.Text;
+            ws.Cell(row, 6).Value = m.SentAt;
             row++;
         }
         ws.Columns().AdjustToContents();
 
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
+        var content = stream.ToArray();
+
         const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-        return File(stream.ToArray(), contentType, "messages.xlsx");
+        return File(content, contentType, "messages.xlsx");
     }
 
     // POST: Messages/ImportExcel — імпорт повідомлень із завантаженого файлу .xlsx.
+    // Очікуваний формат рядків: ChatId | (Чат) | (Відправник) | Текст. Заголовок у рядку 1.
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ImportExcel(IFormFile? file)
@@ -114,7 +136,7 @@ public class MessagesController : Controller
             return RedirectToAction(nameof(Index), new { chatId = await _context.Chats.Select(c => c.Id).FirstOrDefaultAsync() });
         }
 
-        var senderId = await _context.Users.Select(u => u.Id).FirstOrDefaultAsync() ?? string.Empty;
+        var currentUserId = _userManager.GetUserId(User)!;
         var imported = 0;
         int? lastChatId = null;
 
@@ -125,18 +147,30 @@ public class MessagesController : Controller
         using var workbook = new XLWorkbook(stream);
         var ws = workbook.Worksheet(1);
 
-        // Пропускаємо рядок заголовка (1). Стовпець 2 = ChatId, стовпець 4 = Текст.
-        foreach (var r in ws.RowsUsed().Skip(1))
+        // Пропускаємо рядок заголовка (1), читаємо дані з рядка 2.
+        foreach (var row in ws.RowsUsed().Skip(1))
         {
-            if (!r.Cell(2).TryGetValue<int>(out var chatId)) continue;
-            var text = r.Cell(4).GetString();
-            if (string.IsNullOrWhiteSpace(text)) continue;
-            if (!await _context.Chats.AnyAsync(c => c.Id == chatId)) continue;
+            // Стовпець 2 = ChatId, стовпець 5 = Текст (узгоджено з ExportExcel).
+            if (!row.Cell(2).TryGetValue<int>(out var chatId))
+            {
+                continue;
+            }
+            var text = row.Cell(5).GetString();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+
+            // Імпортуємо лише в існуючі чати.
+            if (!await _context.Chats.AnyAsync(c => c.Id == chatId))
+            {
+                continue;
+            }
 
             _context.Messages.Add(new Message
             {
                 ChatId = chatId,
-                SenderId = senderId,
+                SenderId = currentUserId,
                 Text = text,
                 SentAt = DateTime.UtcNow
             });
